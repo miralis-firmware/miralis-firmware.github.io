@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>Miralis Blog</title>
+        <link>https://miralis-firmware.github.io/blog</link>
+        <description>Miralis Blog</description>
+        <lastBuildDate>Sun, 29 Sep 2024 00:00:00 GMT</lastBuildDate>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+        <generator>https://github.com/jpmonette/feed</generator>
+        <language>en</language>
+        <item>
+            <title><![CDATA[Summer 2024 progress report]]></title>
+            <link>https://miralis-firmware.github.io/blog/summer-2024-progress-report</link>
+            <guid>https://miralis-firmware.github.io/blog/summer-2024-progress-report</guid>
+            <pubDate>Sun, 29 Sep 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Three months and 110 commits after the open-sourcing of Miralis we have come a long way, and now sounds like a good time for our first ever progress report.]]></description>
+            <content:encoded><![CDATA[<p>Three months and 110 commits after the <a href="https://github.com/CharlyCst/miralis" target="_blank" rel="noopener noreferrer">open-sourcing of Miralis</a> we have come a long way, and now sounds like a good time for our first ever progress report.
+This summer we had the chance to host Sofia and Noé at the lab, they both have been doing stellar work and Miralis would be nowhere close to where it is today without them, so kudos to both of them, it has really been a pleasure to work together!</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="miralis-in-a-nutshell">Miralis in a nutshell<a href="https://miralis-firmware.github.io/blog/summer-2024-progress-report#miralis-in-a-nutshell" class="hash-link" aria-label="Direct link to Miralis in a nutshell" title="Direct link to Miralis in a nutshell">​</a></h2>
+<p>Miralis is the first implementation of what we call a <strong>virtual firmware monitor</strong>, or VFM for short.
+A VFM is a system that virtualizes the firmware privilege mode, similar to how software-based hypervisors can virtualize the kernel mode.
+Miralis is written in Rust and targets RISC-V platforms, it can run unmodified de-privileged firmware in U-mode, which we call virtual M-mode or vM-mode for short.
+The purpose of Miralis is to protect sensitive workloads from potentially untrusted firmware, a thorny problem especially in the era of confidential computing and trusted execution environments.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="summer-2024">Summer 2024<a href="https://miralis-firmware.github.io/blog/summer-2024-progress-report#summer-2024" class="hash-link" aria-label="Direct link to Summer 2024" title="Direct link to Summer 2024">​</a></h2>
+<p>Over the summer we focused on two major milestones: <strong>full Linux support</strong> and <strong>porting Miralis to the VisionFive 2 board</strong>.
+While we need to polish out a few rough edges, I think we can say that we delivered on both objectives.
+As a bonus thanks to the great work of Sofia and Noé we even managed to submit a first paper that got accepted to the <a href="https://kisv-workshop.github.io/" target="_blank" rel="noopener noreferrer">KISV 2024 workshop</a>, the final version will be published soon (Yay! 🥳).</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="full-linux-support">Full Linux support<a href="https://miralis-firmware.github.io/blog/summer-2024-progress-report#full-linux-support" class="hash-link" aria-label="Direct link to Full Linux support" title="Direct link to Full Linux support">​</a></h3>
+<p>This summer we achieved full Linux support on QEMU, which means that Linux can run seamlessly with a virtualized OpenSBI.
+When running an Operating system along with a virtualized firmware with Miralis the deployment looks like this:</p>
+<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">        ┌─────────────┐ ┌───────────┐</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">U-mode  │             │ │  OpenSBI  │ vM-mode</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        │    Linux    │ └───────────┘</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">S-mode  │             │</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        ├─────────────┴─────────────┐</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">M-mode  │          Miralis          │</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        └───────────────────────────┘</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>An important note is that Miralis only virtualizes the firmware, which means that the OS (both the Linux kernel and user-space applications) executes natively at full speed until it traps to the firmware, at which point Miralis triggers a world switch toward the virtualized M-mode.
+This is similar to software-based virtual machine monitors that pre-dates hardware virtualization extensions, such as the <a href="https://dl.acm.org/doi/abs/10.1145/2382553.2382554?casa_token=Lm-qUMZ5qmEAAAAA:B_O-hl8qBIMBN2xXD-cnlH3GU0Js8yUAsVfAH-O2zPz1t8VTAM2A-D9qRC7fT8ucoRNyNK_hI2Knr24" target="_blank" rel="noopener noreferrer">original VMWare Workstation</a>.
+Those VMMs run user-space applications natively but switch to an efficient virtualized mode for kernel code execution.
+Miralis is heavily inspired by those early designs, but virtualizes the firmware rather than the kernel.</p>
+<p>The interesting bits here is that neither OpenSBI nor Linux need to be modified to run with Miralis.
+This works without re-compilation because both of them are position independent, but even for non-position independent software we would not need to change the source code (beside the base address if hardcoded) because RISC-V has the nice property of being a virtualizable architecture.
+This is very important for us, as we want to provide full backward-compatibility with Miralis.</p>
+<p>The main challenge in getting Linux to work properly is interrupt virtualization.
+While we mostly had to handle M-mode timer interrupts before, Linux virtualization requires proper handling of all kinds of interrupts.
+The trickiest one was the supervisor external interrupt (<code>SEI</code>), which has a different semantic than other interrupt bits: there is not one, but two <code>SEI</code> bits, one writable by the hardware, the other by the software, but software can only read the binary <code>OR</code> of those two bits.</p>
+<p>We now reached a point where Linux runs smoothly on top of Miralis on the QEMU platform.
+We tested with both a small BusyBox-based user-space (which we now run against each pull requests in the CI) and a full ubuntu distribution.
+Running Linux on Miralis is now as simple as executing <code>just run linux-shell</code>.</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="porting-miralis-to-the-visionfive-2">Porting Miralis to the VisionFive 2<a href="https://miralis-firmware.github.io/blog/summer-2024-progress-report#porting-miralis-to-the-visionfive-2" class="hash-link" aria-label="Direct link to Porting Miralis to the VisionFive 2" title="Direct link to Porting Miralis to the VisionFive 2">​</a></h3>
+<p>Our second milestone is porting Miralis to the VisionFive 2 board.
+The VisionFive 2 features a JH7110 SoC, with a quad-core SiFive U74 (RV64GC) processor plus one smaller SiFive S7 (RV64IMAC) monitor core.
+The feature set of the VisionFive 2 is quite different from what QEMU exposes, which rose quite a few challenges.</p>
+<p>The first challenge with the VisionFive 2 was multi-core support.
+Not only is the JH7110 a multi-core platform, but it is also heterogeneous.
+The smaller SiFive S7 core does not support S-mode, for instance, and has some more restrictions we had to take into account.
+We added proper multi-core support to Miralis, which required carefully re-designing the initialization sequence and boot assembly to setup disjoint stacks and initialize global resources such as zeroing-out the <code>.bss</code> section.</p>
+<p>Another interesting part is how to insert Miralis in the boot chain.
+When the VisionFive 2 boot it starts executing a small read-only bootstrap code, the reset vector, which then jumps to the first writable executable memory.
+The vendor-provided software boots like this: reset-vector -&gt; u-boot SPL -&gt; OpenSBI -&gt; u-boot proper -&gt; Linux.
+The first run-time resident firmware in the boot chain is OpenSBI, the role of u-boot SPL is mostly to initialize DRAM and transfer control to the next stage but it does not stay active at run time.
+We decided to insert Miralis after u-boot SPL, and then transfer control to OpenSBI in the virtual M-mode.
+That way Miralis is the only M-mode software present at runtime, as OpenSBI runs deprivileged.</p>
+<p>Finally the VisionFive 2 has a more limited set of hardware features compared to QEMU.
+One major difference, for instance, is the lack of support for misaligned reads and writes.
+On the VisionFive 2 misaligned reads and writes from the kernel are emulated by OpenSBI by changing the memory access privilege (the using the <code>MPRV</code> bit in <code>mstatus</code>).
+The <code>MPRV</code> bit allow M-mode software to read and write memory as if it was executing with S or U-mode privilege (but instruction fetches keep using M-mode privileges), which simplifies accessing OS memory by removing the need for software page table walk and permission checks.
+However the <code>MPRV</code> bit can't be enabled while running virtualized firmware with Miralis as the firmware already executes in U-mode.
+We emulated the <code>MPRV</code> bit in Miralis by forcing traps from the firmware to Miralis during reads and writes when the virtual <code>MPRV</code> is set to 1, which enables Miralis to emulate the read or write using S or U-mode privileges using the physical <code>MPRV</code> bit.
+There are other differences between QEMU and the VisionFive 2, in particular around devices, but we already managed to close most of the gaps.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="what-is-next">What is next<a href="https://miralis-firmware.github.io/blog/summer-2024-progress-report#what-is-next" class="hash-link" aria-label="Direct link to What is next" title="Direct link to What is next">​</a></h2>
+<p>With the start of the new academic semester François and Frédéric are joining forces to work on Miralis.
+Our objectives for the next few months is to demonstrate how to <strong>enforce security policies with Miralis</strong>.
+By default Miralis grants (almost) full access to the machine to the virtualized firmware, therefore it does not provide any security guarantee <em>per se</em>.
+There can be many desirable isolation policies, therefore Miralis does not try to provide the 'one true' security policy, but our goal is rather to enable the implementation of many custom policies.
+For instance it might be desirable to isolate confidential VMs or enclaves from the firmware and host OS, or even the whole host OS form the firmware.</p>
+<p>Overall I am very enthusiastic about Miralis, the project has already gone a long way and built up a very good momentum.
+There is still a lot on our plate to achieve our vision of securing the lowest layer of the software stack, but I am confident we will get there.</p>]]></content:encoded>
+            <category>News</category>
+        </item>
+        <item>
+            <title><![CDATA[Hello, world!]]></title>
+            <link>https://miralis-firmware.github.io/blog/hello-world</link>
+            <guid>https://miralis-firmware.github.io/blog/hello-world</guid>
+            <pubDate>Mon, 01 Jul 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[I am glad to announce that today we open-sourced Miralis, a project I have been working on for the last six months together with some awesome people!]]></description>
+            <content:encoded><![CDATA[<p>I am glad to announce that today we open-sourced <a href="https://github.com/charlycst/miralis" target="_blank" rel="noopener noreferrer">Miralis</a>, a project I have been working on for the last six months together with some awesome people!
+We are still in the very early days, but I think we already built something quite interesting, and I am looking forward to continue developing Miralis in the open.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="the-achilles-heel-of-the-compute-infrastructure">The Achilles' heel of the compute infrastructure<a href="https://miralis-firmware.github.io/blog/hello-world#the-achilles-heel-of-the-compute-infrastructure" class="hash-link" aria-label="Direct link to The Achilles' heel of the compute infrastructure" title="Direct link to The Achilles' heel of the compute infrastructure">​</a></h2>
+<p>The Miralis project started from the realisation that modern computers are built on top of two incompatible assumptions at the lowest level of the stack: the computer's firmware.
+On one hand the firmware's responsibility is to manage and configure the hardware, it is often proprietary and presented as an opaque binary blob that needs to be installed on all machines.
+On the other hand, the firmware recently gained a new role as the entity that enforces machine-wide security policies.
+This is especially true with the rise of confidential computing (e.g. <a href="https://www.arm.com/architecture/security-features/arm-confidential-compute-architecture" target="_blank" rel="noopener noreferrer">ARM CCA</a> or RISC-V's <a href="https://keystone-enclave.org/" target="_blank" rel="noopener noreferrer">Keystone</a>), where the responsibility to provide isolation is shifted from the OS/hypervisor to the firmware.</p>
+<p>The two roles of the firmware, managing the hardware and enforcing security policies, are fundamentally in tension with each other, or at least will be until hardware manufacturers agree to release the source of their firmware.
+Until then, the security of the world's compute infrastructure has no choice but to rely on opaque binary blobs.</p>
+<p>With Miralis we would like to propose something different.
+We acknowledge the need for proprietary firmware but we do not want to rely on it for security.
+Rather, we propose to deprivilege proprietary firmware and to enforce strong isolation policies to decouple the security of the rest of the computing stack from the correctness (and cooperation) of opaque firmware.
+We understand that requiring firmware changes would be disruptive, therefore we propose to execute unmodified firmware by virtualising and sandboxing the lowest privilege level on the machine.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="miralis-in-a-nutshell">Miralis in a nutshell<a href="https://miralis-firmware.github.io/blog/hello-world#miralis-in-a-nutshell" class="hash-link" aria-label="Direct link to Miralis in a nutshell" title="Direct link to Miralis in a nutshell">​</a></h2>
+<p>In short Miralis is RISC-V security monitor that virtualises M-mode software.
+By "virtualise M-mode software" I mean that Miralis can run deprivileged M-mode software transparently, like it would execute on a bare metal RISC-V machine.
+As a quick summary for people new to RISC-V, the RISC-V architecture exposes up to three privilege modes (ignoring the hypervisor extension): user mode (U-mode, for applications), supervisor mode (S-mode, for the OS kernel), and machine mode (M-mode, for the firmware).</p>
+<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">        ┌──────────────┐</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">U-mode  │   User App   │</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        ├──────────────┤</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">S-mode  │      OS      │</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        ├──────────────┤</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">M-mode  │   Firmware   │</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        └──────────────┘</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>With Miralis we make it possible to execute firmware in a virtual M-mode.
+In practice we run the firmware in U-mode under the control of Miralis.
+This makes it possible to sandbox M-mode software, which how we protect the rest of the stack from untrusted firmware, while running the OS natively at full speed.</p>
+<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">        ┌──────────────┐ ┌────────────┐</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">U-mode  │   User App   │ │  Firmware  │</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        ├──────────────┤ └────────────┘</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">S-mode  │      OS      │</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        ├──────────────┴──────────────┐</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">M-mode  │           Miralis           │</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        └─────────────────────────────┘</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>The firmware is virtualised using a classical trap &amp; emulate approach: most of the instructions are executed natively by the processor, but privileged instructions trap to Miralis which will emulate them in software (while enforcing security invariants).</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="current-status">Current status<a href="https://miralis-firmware.github.io/blog/hello-world#current-status" class="hash-link" aria-label="Direct link to Current status" title="Direct link to Current status">​</a></h2>
+<p>The project started six months ago, slowly at first but we are now making progress at a steady pace.
+The initial focus was on the software architecture, to make the project modular and as future proof as we could anticipate.
+The main components of Miralis are in place.
+This include for instance the instruction decoder, instruction emulation, virtual contexts, and context switching.
+The code base is modular over the platform (to support multiple boards and SoCs in the future) and the architecture (to support, e.g., running Miralis in user-space for unit and integration testing).</p>
+<p>We do not yet support a wide variety of workloads, but we do have a solid foundation.
+Miralis can already boot an unmodified <a href="https://github.com/riscv-software-src/opensbi" target="_blank" rel="noopener noreferrer">OpenSBI</a> in virtual M-mode (that is physical U-mode) with a simple payload. We also experimented with other firmware, such as <a href="https://zephyrproject.org/" target="_blank" rel="noopener noreferrer">Zephyr</a> for which we have early support.</p>
+<p>I would like use this opportunity to thank all the people who contributed to the Miralis project, especially my awesome colleague Neelu who helped design Miralis, Abel who achieved a tremendous amount of work over the last semester and actually took Miralis to the place it is today, and François who recently joined the effort and made some great contributions.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="what-is-next">What is next<a href="https://miralis-firmware.github.io/blog/hello-world#what-is-next" class="hash-link" aria-label="Direct link to What is next" title="Direct link to What is next">​</a></h2>
+<p>This summer we will focus on delivering on the Miralis promises, in particular by focusing on full Linux support and porting Miralis to physical boards in addition to our current QEMU support.
+We will also explore new approaches to deliver best-in-class security, in particular through an innovative take a formally verifying crucial pieces of Miralis, a subject I would like to discuss more in the near future.</p>
+<p>Over the summer Sofia and Noé will be joining forces, I'm sure we will be able to achieve a lot by working together and I am looking forward to see how far we can go with Miralis, with the ultimate goal to help secure the foundations of the world's compute infrastructure.</p>]]></content:encoded>
+            <category>News</category>
+        </item>
+    </channel>
+</rss>
